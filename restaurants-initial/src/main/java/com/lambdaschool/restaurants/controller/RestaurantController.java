@@ -1,8 +1,12 @@
 package com.lambdaschool.restaurants.controller;
 
+import com.lambdaschool.restaurants.model.ErrorDetail;
 import com.lambdaschool.restaurants.model.Restaurant;
 import com.lambdaschool.restaurants.service.RestaurantService;
+import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +25,32 @@ public class RestaurantController
     @Autowired
     private RestaurantService restaurantService;
 
+    @ApiOperation(value = "return all Restaurants", response = Restaurant.class, responseContainer = "List")
+    @ApiImplicitParams({
+                               @ApiImplicitParam(name = "page", dataType = "integer", paramType = "query",
+                                                 value = "Results page you want to retrieve (0..N)"),
+                               @ApiImplicitParam(name = "size", dataType = "integer", paramType = "query",
+                                                 value = "Number of records per page."),
+                               @ApiImplicitParam(name = "sort", allowMultiple = true, dataType = "string", paramType = "query",
+                                                 value = "Sorting criteria in the format: property(,asc|desc). " +
+                                                         "Default sort order is ascending. " +
+                                                         "Multiple sort criteria are supported.")})
+
+    // http://localhost:2019/restaurants/restaurants/?page=1&size=10
+    // http://localhost:2019/restaurants/restaurants/?sort=city,desc&sort=name
+    @GetMapping(value = "/restaurants/paging",
+                produces = {"application/json"})
+    public ResponseEntity<?> listAllRestaurantsByPage(@PageableDefault(page = 0,
+                                                                       size = 5)
+                                                              Pageable pageable)
+    {
+        List<Restaurant> myRestaurants = restaurantService.findAllPageable(pageable);
+        // how to return all the restaurants from the paging url
+       // List<Restaurant> myRestaurants = restaurantService.findAllPageable(Pageable.unpaged());
+        return new ResponseEntity<>(myRestaurants, HttpStatus.OK);
+    }
+
+    // http://localhost:2019/restaurants/restaurants
 
     @GetMapping(value = "/restaurants",
                 produces = {"application/json"})
@@ -30,9 +60,13 @@ public class RestaurantController
         return new ResponseEntity<>(myRestaurants, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Retrieves a restaurant associated with the restaurantid", response = Restaurant.class)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Restaurant Found", response = Restaurant.class),
+    @ApiResponse(code = 404, message = "Restaurant not found", response = ErrorDetail.class)})
     @GetMapping(value = "/restaurant/{restaurantId}",
                 produces = {"application/json"})
     public ResponseEntity<?> getRestaurantById(
+            @ApiParam(value = "Id of restaurant", required = true, example = "1")
             @PathVariable
                     Long restaurantId)
     {
@@ -44,6 +78,7 @@ public class RestaurantController
     @GetMapping(value = "/restaurant/name/{name}",
                 produces = {"application/json"})
     public ResponseEntity<?> getRestaurantByName(
+            @ApiParam(value = "Name of restaurant", required = true, example = "Good%20Eats")
             @PathVariable
                     String name)
     {
